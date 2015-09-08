@@ -168,6 +168,7 @@ class Appointments {
 		$this->services_table 		= $wpdb->prefix . "app_services";
 		$this->workers_table 		= $wpdb->prefix . "app_workers";
 		$this->app_table 			= $wpdb->prefix . "app_appointments";
+		$this->app_appointments_custom 			= $wpdb->prefix . "app_appointments_custom";
 		$this->transaction_table 	= $wpdb->prefix . "app_transactions";
 		$this->cache_table 			= $wpdb->prefix . "app_cache";
 		// DB version
@@ -535,12 +536,16 @@ function receive_paypal(){
 		$note 			= $values[15];
 		//print($worker);
 		
+		global $wpdb;
+		$wpdb->query("INSERT INTO `wp_app_appointments_custom` (`ID`, `created`, `user`, `name`, `email`, `phone`, `address`, `city`, `location`, `service`, `worker`, `price`, `coupon`, `status`, `start`, `end`, `sent`, `sent_worker`, `note`, `gcal_ID`, `gcal_updated`) VALUES (NULL, ".$created.", ".$user.", ".$name.", $email, NULL, NULL, NULL, '0', '0', '1', '23', 'ssss', 'pending', '2015-07-16 00:00:00', '2015-07-30 00:00:00', NULL, NULL, NULL, NULL, NULL)" );
+
+		
 		if(!empty($worker)){
 			$arrs= explode( "|", $worker );
 			//print_r($arrs);
 			global $wpdb;	
 			foreach($arrs as $val){
-				print($val);
+				//print($val);
 				global $wpdb;
 				$wpdb->query("INSERT INTO `wp_app_appointments` (`ID`, `created`, `user`, `name`, `email`, `phone`, `address`, `city`, `location`, `service`, `worker`, `price`, `coupon`, `status`, `start`, `end`, `sent`, `sent_worker`, `note`, `gcal_ID`, `gcal_updated`) VALUES (NULL, ".$created.", ".$user.", ".$name.", $email, NULL, NULL, NULL, '0', '0', ".$val.", '23', 'ssss', 'pending', '2015-07-16 00:00:00', '2015-07-30 00:00:00', NULL, NULL, NULL, NULL, NULL)" );
 
@@ -7372,22 +7377,22 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 		switch($type) {
 
 			case 'active':
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('confirmed', 'paid') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('confirmed', 'paid') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 			case 'pending':
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('pending') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('pending') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 			case 'completed':
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('completed') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('completed') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 			case 'removed':
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('removed') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('removed') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 			case 'reserved':
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('reserved') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('reserved') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 			default:
-						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_table} WHERE status IN ('confirmed', 'paid') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
+						$sql = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM {$this->app_appointments_custom} WHERE status IN ('confirmed', 'paid') APP_ADD ORDER BY {$order_by} LIMIT %d, %d", $startat, $num);
 						break;
 		}
 		$sql = preg_replace('/\bAPP_ADD\b/', $add, $sql);
@@ -8025,6 +8030,12 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 	function reports() {
 	}
 
+
+	function get_same_dat_and_client_at_one_row(){
+		//$get_transactions = $this->get_transactions($type, $startat, $num);
+		
+		}
+
 	/**
 	 *	Get transaction records
 	 *  Modified from Membership plugin by Barry
@@ -8132,6 +8143,32 @@ function receive_paypal_2($custom){
 		$end 		= $values[14];
 		$note 		= $values[15];
 		//print($worker);
+
+					global $wpdb;
+					$result = $wpdb->insert( 'wp_app_appointments_custom',
+							array(
+								'created'	=>	$created,
+								'user'		=>	$user_id,
+								'name'		=>	$name,
+								'email'		=>	$email,
+								'phone'		=>	$phone,
+								'address'	=>	$address,
+								'city'		=>	$city,
+								'location'	=>	$location,
+								'service'	=>	$service,
+								'worker'	=> 	$worker,
+								'price'		=>	$price,
+								'coupon'	=>	$coupon,
+								'status'	=>	$status,
+								'start'		=>	$start,
+								'end'		=>	$end,
+								'note'		=>	$note
+							),
+							array('%s')
+						);
+
+
+
 		
 		if(!empty($worker)){
 			$arrs= explode( "|", $worker );
