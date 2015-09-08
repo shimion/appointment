@@ -1835,6 +1835,33 @@ class App_Shortcode_Confirmation extends App_Shortcode {
 		$ret .= '</div>';
 */
 
+
+
+		$ret .='<div class="appointments-field appointments-coupon-field"><label for="appointments-attendeesnumberonlyc0dd276d7b88a1e0d4fe71c58c963f5f"><span>&nbsp;</span></label><button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">Attendees Information</button></div>';
+
+
+		$ret .='<!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Attendees Information</h4>
+      </div>
+      <div class="modal-body">
+        '.$appointments->attendees_fields($_REQUEST['attendees']).'
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>';
+
+
+
+
 		$ret .='<div class="appointments-field appointments-attendeesnumberonly-field" style="display:none;"><label for="appointments-attendeesnumberonlyc0dd276d7b88a1e0d4fe71c58c963f5f"><span>Attendees ( number only) </span></label><input type="text" id="appointments-attendeesnumberonlyc0dd276d7b88a1e0d4fe71c58c963f5f" class="appointments-field-entry appointments-attendeesnumberonly-field-entry" name="attendeesnumberonly" value="'.$_REQUEST['attendees'].'"></div>';
 		$ret .= '<div style="clear:both"></div>';
 		

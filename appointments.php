@@ -202,6 +202,31 @@ class Appointments {
 	}
 	
 
+	function attendees_fields_form($i){
+			$output = '';
+			$output = '<h3>Attendees Information - '.$i.'</h3>';
+			$output .= '<div>Name:</div><div><input type="text" name="att_name" id="att_name" value=""></div>';
+			$output .= '<div>Age:</div><div><input type="text" name="att_age" id="att_age" value=""></div>';
+			$output .= '<div>Weight:</div><div><input type="text" name="att_weight" id="att_weight" value=""></div>';
+			return $output;
+		}
+
+
+	function attendees_fields($arr){
+			
+			if(!empty($arr)){
+				$i = 0;
+				$output = '';
+				while ($i<=$arr){
+					$i++;
+					$output .= $this->attendees_fields_form($i);
+					
+					
+					}
+				}
+				
+				return $output;
+		}
 
 	function get_event_dates(){
 		global $wpdb;
@@ -5156,6 +5181,9 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 	function load_scripts_styles( ) {
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'jquery-tablesorter', $this->plugin_url . '/js/jquery.tablesorter.min.js', array('jquery'), $this->version );
+		wp_enqueue_script( 'bootstrap', $this->plugin_url . '/js/bootstrap.min.js', array('jquery'), $this->version );
+		wp_enqueue_style( 'bootstrap', $this->plugin_url . '/css/bootstrap.min.css', array(), $this->version );
+		
 		add_action( 'wp_footer', array( &$this, 'wp_footer' ) );	// Publish plugin specific scripts in the footer
 
 		// TODO: consider this
