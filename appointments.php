@@ -74,6 +74,7 @@ class Appointments {
 		if (empty($this->date_format)) $this->date_format = "Y-m-d";
 
 		$this->datetime_format = $this->date_format . " " . $this->time_format;
+		add_action( 'admin_enqueue_scripts', array( &$this, 'load_scripts_styles_backend' ) );
 		//add_action( 'init', array( &$this, 'receive_paypal' ) );		// Modify database in case a user is deleted
 		add_action( 'delete_user', array( &$this, 'delete_user' ) );		// Modify database in case a user is deleted
 		add_action( 'wpmu_delete_user', array( &$this, 'delete_user' ) );	// Same as above
@@ -202,12 +203,74 @@ class Appointments {
 	}
 	
 
+
+	function attendees_fields_form_jquery($i){
+		$script .= 'var att_name_'.$i.' = $("#att_name_'.$i.'").val();';
+		$script .= 'var att_age_'.$i.' = $("#att_age_'.$i.'").val();';
+		$script .= 'var att_weight_'.$i.' = $("#att_weight_'.$i.'").val();';
+		
+		return $script;
+		}
+
+
+	function attendees_fields_jquery($arr){
+			
+			if(!empty($arr)){
+				$i = 1;
+				$output = '';
+				while ($i<=$arr){
+					$output .= $this->attendees_fields_form_jquery($i);
+					$i++;
+					
+					}
+				}
+				
+				return $output;
+		}
+
+
+
+
+	function attendees_fields_form_ajax($i){
+		$script = '';
+		$script .= '"+att_name_'.$i.'+"|"+att_age_'.$i.'+"|"+att_weight_'.$i.'+"';		
+		
+		return $script;
+		}
+
+
+	function attendees_fields_ajax($arr){
+			
+			if(!empty($arr)){
+				$i = 1;
+				$output = '';
+				while ($i<=$arr){ 
+					if($i>1){
+						$output .= '!';
+					$output .= '"+att_name_'.$i.'+"|"+att_age_'.$i.'+"|"+att_weight_'.$i.'+"';	;
+					
+						}else{
+					$output .= '"+att_name_'.$i.'+"|"+att_age_'.$i.'+"|"+att_weight_'.$i.'+"';	;
+						}
+					$i++;
+	
+					
+					}
+				}
+				
+				return $output;
+		}
+
+
+
+
+
 	function attendees_fields_form($i){
 			$output = '';
 			$output = '<h3>Attendees Information - '.$i.'</h3>';
-			$output .= '<div>Name:</div><div><input type="text" name="att_name" id="att_name" value=""></div>';
-			$output .= '<div>Age:</div><div><input type="text" name="att_age" id="att_age" value=""></div>';
-			$output .= '<div>Weight:</div><div><input type="text" name="att_weight" id="att_weight" value=""></div>';
+			$output .= '<div>Name:</div><div><input type="text" name="att_name_'.$i.'" id="att_name_'.$i.'" value=""></div>';
+			$output .= '<div>Age:</div><div><input type="text" name="att_age_'.$i.'" id="att_age_'.$i.'" value=""></div>';
+			$output .= '<div>Weight:</div><div><input type="text" name="att_weight_'.$i.'" id="att_weight_'.$i.'" value=""></div>';
 			return $output;
 		}
 
@@ -215,12 +278,11 @@ class Appointments {
 	function attendees_fields($arr){
 			
 			if(!empty($arr)){
-				$i = 0;
+				$i = 1;
 				$output = '';
 				while ($i<=$arr){
-					$i++;
 					$output .= $this->attendees_fields_form($i);
-					
+					$i++;
 					
 					}
 				}
@@ -2454,6 +2516,11 @@ function check_appointments_already_taken($start, $end){
 		else
 			$refund = '';
 
+		if ( isset( $_POST["att_info"] ) && $_POST["att_info"] )
+			$att_info = $_POST["att_info"];
+		else
+			$att_info = '';
+
 
 
 
@@ -2587,7 +2654,8 @@ function check_appointments_already_taken($start, $end){
 								'status'	=>	$status,
 								'start'		=>	date ("Y-m-d H:i:s", $start),
 								'end'		=>	date ("Y-m-d H:i:s", $start + ($duration * 60 ) ),
-								'note'		=>	'none'
+								'note'		=>	'none',
+								'att_info'			=>$att_info,
 							);
 							
 						
@@ -2668,6 +2736,7 @@ function check_appointments_already_taken($start, $end){
 							'coupon'			=>$this->check_cuppon($coupon),
 							'refund'			=> $refund,
 							'result'			=>$result,
+							'att_info'			=>$att_info,
 							)
 						)
 					);
@@ -5178,6 +5247,12 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 	 * Function to load all necessary scripts and styles
 	 * Can be called externally, e.g. when forced from a page template
 	 */
+	 
+	function load_scripts_styles_backend( ) {
+		wp_enqueue_script( 'bootstrap', $this->plugin_url . '/js/bootstrap-admin.js', array('jquery'), $this->version );
+		wp_enqueue_style( 'bootstrap', $this->plugin_url . '/css/bootstrap-admin.css', array(), $this->version );
+	}
+	 
 	function load_scripts_styles( ) {
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'jquery-tablesorter', $this->plugin_url . '/js/jquery.tablesorter.min.js', array('jquery'), $this->version );
@@ -7636,7 +7711,7 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 		global $wpdb;
 		$app_id = $_POST["app_id"];
 		if ( $app_id ) {
-			$app = $wpdb->get_row( $wpdb->prepare("SELECT * FROM {$this->app_table} WHERE ID=%d", $app_id) );
+			$app = $wpdb->get_row( $wpdb->prepare("SELECT * FROM {$this->app_appointments_custom} WHERE ID=%d", $app_id) );
 			$start_date_timestamp = date("Y-m-d", strtotime($app->start));
 			if ( $this->locale_error ) {
 				$start_date = date( $safe_date_format, strtotime( $app->start ) );
@@ -7930,6 +8005,9 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 		$html .= '<span class="error" style="display:none"></span>';
 		$html .= '<br class="clear">';
 		$html .= '</p>';
+		
+
+				
 
 		$html .= '</td>';
 		$html .= '</tr>';
@@ -8170,12 +8248,15 @@ function receive_paypal_2($custom){
 		$start 			= $values[13];
 		$end 		= $values[14];
 		$note 		= $values[15];
+		$att_info 		= $values[16];
 		//print($worker);
 
+		$cid = uniqid();
 					global $wpdb;
 					$result = $wpdb->insert( 'wp_app_appointments_custom',
 							array(
 								'created'	=>	$created,
+								'cid'		=>	$cid,
 								'user'		=>	$user_id,
 								'name'		=>	$name,
 								'email'		=>	$email,
@@ -8190,7 +8271,8 @@ function receive_paypal_2($custom){
 								'status'	=>	$status,
 								'start'		=>	$start,
 								'end'		=>	$end,
-								'note'		=>	$note
+								'note'		=>	$note,
+								'att_info'		=>	$att_info
 							),
 							array('%s')
 						);
@@ -8200,12 +8282,23 @@ function receive_paypal_2($custom){
 		
 		if(!empty($worker)){
 			$arrs= explode( "|", $worker );
-			//print_r($arrs);
-			foreach($arrs as $val){
+			
+			if(!empty($att_info)){
+			$att_info= explode( "!", $att_info );
+				}
+				
+			$array_combine = array_combine($arrs,$att_info);	
+			//print_r($array_combine);
+			foreach($array_combine as $key=>$val){
+					$each_info= explode( "|", $val );
+					$name = $each_info['0'];
+					$age = $each_info['1'];
+					$weight = $each_info['2'];
 					global $wpdb;
 					$result = $wpdb->insert( $this->app_table,
 							array(
 								'created'	=>	$created,
+								'cid'		=>	$cid,
 								'user'		=>	$user_id,
 								'name'		=>	$name,
 								'email'		=>	$email,
@@ -8214,7 +8307,7 @@ function receive_paypal_2($custom){
 								'city'		=>	$city,
 								'location'	=>	$location,
 								'service'	=>	$service,
-								'worker'	=> 	$val,
+								'worker'	=> 	$key,
 								'price'		=>	$price,
 								'coupon'	=>	$coupon,
 								'status'	=>	$status,

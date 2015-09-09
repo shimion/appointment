@@ -1852,8 +1852,7 @@ class App_Shortcode_Confirmation extends App_Shortcode {
         '.$appointments->attendees_fields($_REQUEST['attendees']).'
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Save changes</button>
       </div>
     </div>
   </div>
@@ -1968,6 +1967,8 @@ class App_Shortcode_Confirmation extends App_Shortcode {
 		$script .= 'var app_address = $(".appointments-address-field-entry").val();';
 		$script .= 'var app_city = $(".appointments-city-field-entry").val();';
 		$script .= 'var app_note = $(".appointments-note-field-entry").val();';
+		$script .= $appointments->attendees_fields_jquery($_REQUEST['attendees']);
+		$script .= 'var attendees_info = "'.$appointments->attendees_fields_ajax($_REQUEST['attendees']).'";';
 		$script .= 'var attendees = $(".appointments-attendeesnumberonly-field-entry").val();';
 		$script .= 'var coupon = $(".appointments-coupon-field-entry").val();';
 		$script .= 'var refund = $(".appointments-refund-field-entry[name=refund_policy]:checked").val();';
@@ -1975,7 +1976,7 @@ class App_Shortcode_Confirmation extends App_Shortcode {
 		$script .= 'var app_gcal = "";';
 		$script .= 'var app_warning_text = "'.esc_js($warning_text).'";';
 		$script .= 'if ($(".appointments-gcal-field-entry").is(":checked")){app_gcal=1;}';
-		$script .= 'var post_data = {action: "post_confirmation", value: final_value, app_name: app_name, app_email: app_email, app_phone: app_phone, app_address: app_address, app_city: app_city, app_note: app_note, app_gcal: app_gcal, attendees: attendees, refund: refund, coupon: coupon,  nonce: "'. wp_create_nonce() .'"};';
+		$script .= 'var post_data = {action: "post_confirmation", value: final_value, app_name: app_name, app_email: app_email, app_phone: app_phone, app_address: app_address, app_city: app_city, app_note: app_note, app_gcal: app_gcal, attendees: attendees, refund: refund, coupon: coupon, att_info: attendees_info,  nonce: "'. wp_create_nonce() .'"};';
 		if ( $appointments->options["ask_name"] ) {
 			$script .= 'if($(".appointments-name-field-entry").val()=="" ) {';
 			$script .= 'alert(app_warning_text);';
