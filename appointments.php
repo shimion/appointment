@@ -30,6 +30,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 define('inc',__dir__.'/includes/');
 require_once(inc . 'app-admin-settings-working_hours.php');
+require_once(inc . 'appointment-listing.php');
 
 include('test.php');
 
@@ -82,6 +83,7 @@ class Appointments {
 
 		add_action( 'plugins_loaded', array(&$this, 'localization') );		// Localize the plugin
 		add_action( 'init', array( &$this, 'init' ), 20 ); 						// Initial stuff
+		//add_action( 'init', array( &$this, 'delete_entry_older_this_month' )); 						// Initial stuff
 		add_action( 'init', array( &$this, 'cancel' ), 19 ); 				// Check cancellation of an appointment
 		add_filter( 'the_posts', array(&$this, 'load_styles') );			// Determine if we use shortcodes on the page
 		add_action( 'wp_ajax_nopriv_app_paypal_ipn', array(&$this, 'handle_paypal_return')); // Send Paypal to IPN function
@@ -102,6 +104,7 @@ class Appointments {
 		add_action( 'wp_ajax_delete_log', array( &$this, 'delete_log' ) ); 				// Clear log
 		add_action( 'wp_ajax_inline_edit', array( &$this, 'inline_edit' ) ); 			// Add/edit appointments
 		add_action( 'wp_ajax_inline_edit_save', array( &$this, 'inline_edit_save' ) ); 	// Save edits
+		add_action( 'wp_ajax_bk_save_att_data', array( &$this, 'bk_save_att_data' ) ); 	// Save edits inner button
 		add_action( 'wp_ajax_js_error', array( &$this, 'js_error' ) ); 					// Track js errors
 		add_action( 'wp_ajax_app_export', array( &$this, 'export' ) ); 					// Export apps
 
@@ -113,6 +116,7 @@ class Appointments {
 
 		// Backend three line ajax hooks
 		add_action( 'wp_ajax_check_user', array( &$this, 'check_user' ) ); 		// Do after final confirmation
+		add_action( 'wp_ajax_block', array( &$this, 'block' ) ); 		// Do after final confirmation
 		add_action( 'wp_ajax_delete_user_app', array( &$this, 'delete_user_app' ) ); 		// Do after final confirmation
 		add_action( 'wp_ajax_add_new_data', array( &$this, 'add_new_data' ) ); 		// Do after final confirmation
 		add_action( 'wp_ajax_add_save_user', array( &$this, 'add_save_user' ) ); 		// Do after final confirmation
@@ -202,8 +206,24 @@ class Appointments {
 		}
 	}
 	
-
-
+	//block function for appointmentlinsting.php
+	
+	function block(){
+		global $wpdb;
+		$data = $_POST['data'];
+		$query = $wpdb->get_row( "SELECT * FROM `wp_three_line_appointment` WHERE `ID` = $data" );
+		if($query->block=='0'){
+			$result = $wpdb->query("UPDATE `wp_three_line_appointment` SET block = 1 WHERE ID = $query->ID ");
+				$pass = 'background-color: #32E007;    border: 1px solid #32E007;    padding: 2px 10px;    border-radius: 3px;    color: #FFF;';
+		}elseif($query->block=='1'){
+			$result = $wpdb->query("UPDATE `wp_three_line_appointment` SET block = 0 WHERE ID = $query->ID ");
+				$pass = 'background-color: #FD4444;    border: 1px solid #FD4444;    padding: 2px 10px;    border-radius: 3px;    color: #FFF;';
+			}
+		
+		die( json_encode( array('result'=>$pass) ));	
+			
+		} 
+	
 	function attendees_fields_form_jquery($i){
 		$script .= 'var att_name_'.$i.' = $("#att_name_'.$i.'").val();';
 		$script .= 'var att_age_'.$i.' = $("#att_age_'.$i.'").val();';
@@ -275,6 +295,8 @@ class Appointments {
 		}
 
 
+
+
 	function attendees_fields($arr){
 			
 			if(!empty($arr)){
@@ -292,6 +314,7 @@ class Appointments {
 
 	function get_event_dates(){
 		global $wpdb;
+		
 		$user_ID = get_current_user_id();
 		$user_count = $wpdb->get_results( "SELECT * FROM wp_three_line_appointment WHERE worker= '$user_ID'" );
 		 $initTime = date("Y")."-".date("m")."-".date("d")." ".date("H").":00:00";
@@ -407,10 +430,14 @@ class Appointments {
 		global $wpdb;
 		$user_ID = get_current_user_id();
 		$data = $date . ':' . $user_ID; 
-		$user_count = $wpdb->get_row( "SELECT * FROM wp_three_line_appointment WHERE `date` = '$date%' AND worker LIKE '$user_ID'" );
+		$user_count = $wpdb->get_row( "SELECT * FROM wp_three_line_appointment WHERE `date` = '$date%' AND worker LIKE '$user_ID' " );
 		if($user_count != NULL){
 			//$button_value = 'Edit';
+			if($user_count->block=='0'){
 			$form = '<form method="post" id="form"><table><h3>Start Hours:</h3><tr><td><p>Start:</p><select name="open[Sunday][start]" id="start_start" autocomplete="off">'.$this->option_array($user_count->working_hours_start).'</select></td><td><p>End:</p><select id="start_end" name="open[Sunday][end]" autocomplete="off">'.$this->option_array($user_count->working_hours_end).'</select></td></tr></table><table><h3>Break Hours:</h3><tr><td><strong>Enable Break Hours: </strong><select id="enable_break">'.$this->option_break_enable($user_count->break_enable).'</select></td></tr><tr><td><p>Start:</p><select id="break_start" name="close[Sunday][start]" autocomplete="off">'.$this->option_array($user_count->break_start).'</select></td><td><p>End:</p><select name="open[Sunday][end]" id="break_end" autocomplete="off">'.$this->option_array($user_count->break_end).'</select></td></tr></table><p id="submit_3line_hours" class="button-primary">Update</p><p id="submit_3line_hours_delete" class="button-primary" style="margin-left: 20px;">Delete</p></form>';
+			}else{
+			$form = '<form method="post" id="form"><strong>SORRY YOU DO NOT HAVE PERMISSION TO EDIT IT</strong></form>';	
+				}
 			}else{
 			//$button_value = 'Add New';
 			$form = '<form method="post" id="form"><table><h3>Start Hours:</h3><tr><td><p>Start:</p><select name="open[Sunday][start]" id="start_start" autocomplete="off">'.$this->option_array('00:00').'</select></td><td><p>End:</p><select id="start_end" name="open[Sunday][end]" autocomplete="off">'.$this->option_array('00:00').'</select></td></tr></table><table><h3>Break Hours:</h3><tr><td><strong>Enable Break Hours:</strong> <select id="enable_break">'.$this->option_break_enable('1').'</select></td></tr><tr><td><p>Start:</p><select id="break_start" name="close[Sunday][start]" autocomplete="off">'.$this->option_array('00:00').'</select></td><td><p>End:</p><select name="open[Sunday][end]" id="break_end" autocomplete="off">'.$this->option_array('00:00').'</select></td></tr></table><p id="submit_3line_hours" class="button-primary">Submit</p></form>';
@@ -2586,7 +2613,7 @@ function check_appointments_already_taken($start, $end){
 						}else{
 							$price = $price;
 						}
-				$status = 'active';
+				$status = 'confirmed';
 		
 			}	
 			$worker_checking = $this->notification_if_not_available_service_provider($start, $end);
@@ -7701,6 +7728,41 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 		$this->locale_error = true;
 		return $date;
 	}
+	
+
+
+	//delete worker entry which date is over (wp_three_line_appointment)
+	
+	function delete_entry_older_this_month(){
+		global $wpdb;
+		$wpdb->get_results( "DELETE FROM  `wp_three_line_appointment` WHERE  `date` < CURRENT_TIMESTAMP" );
+		}
+
+	function attendees_fields_form_backend($i, $name, $age, $weight){
+			$output = '';
+			$output = '<h3>Attendees Information - '.$i.'</h3>';
+			$output .= '<div>Name:</div><div><input type="text" name="bk_att_name_'.$i.'" id="bk_att_name_'.$i.'" value="'.$name.'"></div>';
+			$output .= '<div>Age:</div><div><input type="text" name="bk_att_age_'.$i.'" id="bk_att_age_'.$i.'" value="'.$age.'"></div>';
+			$output .= '<div>Weight:</div><div><input type="text" name="bk_att_weight_'.$i.'" id="bk_att_weight_'.$i.'" value="'.$weight.'"></div>';
+			return $output;
+		}
+
+
+
+
+	
+	function get_attendance_info($cid){
+		global $wpdb;
+		$query = $wpdb->get_results( "SELECT * FROM wp_app_appointments WHERE cid LIKE '$cid'" );	
+		$i = 1;
+		foreach	($query as $q){
+				$ret.= $this->attendees_fields_form_backend($i, $q->name, $q->age, $q->weight);
+				$i++;
+			}
+			
+			return $ret;
+		}
+	
 
 	// Edit or create appointments
 	function inline_edit() {
@@ -7710,6 +7772,7 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 
 		global $wpdb;
 		$app_id = $_POST["app_id"];
+		$cid = $_POST["cid"];
 		if ( $app_id ) {
 			$app = $wpdb->get_row( $wpdb->prepare("SELECT * FROM {$this->app_appointments_custom} WHERE ID=%d", $app_id) );
 			$start_date_timestamp = date("Y-m-d", strtotime($app->start));
@@ -8000,8 +8063,55 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 			$title = __('Click to save or update', 'appointments');
 		}
 		$html .= '<a '.$js.' title="'.$title.'" class="button-primary save alignright">'.__('Save / Update','appointments').'</a>';
+		$html .= '<a '.$js.' title="'.$title.'" data-toggle="modal" data-target="#myModal" class="button-primary alignright" style="margin-right:20px;">'.__('Attendees Information','appointments').'</a>';
+		$html .='<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Attendees Information</h4>
+      </div>
+      <div class="modal-body">
+        '.$this->get_attendance_info($cid).'
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary sever_but">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>';
+		$html .= '<script>';
+		$html .= '	jQuery(document).ready(function($){';
+		$html .= '$(".sever_but").click(function(){';
+		$html .= $this->bk_attendees_fields_jquery($cid);
+		$html .= 'var attendees_info = "'.$this->bk_attendees_fields_ajax($cid).'";';
+		$html .= 'var bk_save_att_data = {action: "bk_save_att_data", cid: "'.$cid.'", attendees_info: attendees_info,  nonce: "'. wp_create_nonce() .'"};';
+		
+		$html .='$.post(ajaxurl, bk_save_att_data, function(response) {
+				$(".add-new-waiting").hide();
+				if ( response && response.error ){
+					alert(response.error);
+				}
+				else if (response) {
+					alert("ATTENDEES INFORMATION IS UPDATED");
+					var redirection_url = "'.admin_url( 'admin.php?page=appointments&type='.$app->status.'', 'http' ).'";
+					window.location.href=redirection_url;
+				}
+				else {alert("'.esc_js(__("Unexpected error","appointments")).'");}
+			},"json");
+';	
+		
+		
+		$html .= '})';
+		$html .= '})';
+		$html .= '</script>';
+
+
+
 		$html .= '<img class="waiting" style="display:none;" src="'.admin_url('images/wpspin_light.gif').'" alt="">';
 		$html .= '<input type="hidden" name="app_id" value="'.$app->ID.'">';
+		$html .= '<input type="hidden" name="cid" value="'.$app->cid.'">';
 		$html .= '<span class="error" style="display:none"></span>';
 		$html .= '<br class="clear">';
 		$html .= '</p>';
@@ -8016,12 +8126,115 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 
 	}
 
+
+	//Shimion startbackend update
+	function bk_attendees_fields_form_jquery($i){
+		$script .= 'var bk_att_name_'.$i.' = $("#bk_att_name_'.$i.'").val();';
+		$script .= 'var bk_att_age_'.$i.' = $("#bk_att_age_'.$i.'").val();';
+		$script .= 'var bk_att_weight_'.$i.' = $("#bk_att_weight_'.$i.'").val();';
+		return $script;
+		}
+
+
+
+	function bk_attendees_fields_jquery($cid){
+		global $wpdb;
+		$query = $wpdb->get_results( "SELECT * FROM wp_app_appointments WHERE cid LIKE '$cid'" );	
+		$i = 1;
+		foreach	($query as $q){
+				$ret.= $this->bk_attendees_fields_form_jquery($i);
+				$i++;
+			}
+			
+			return $ret;
+		}
+	
+
+
+
+
+
+
+	function bk_attendees_fields_ajax($cid){
+		global $wpdb;
+		$query = $wpdb->get_results( "SELECT * FROM wp_app_appointments WHERE cid LIKE '$cid'" );	
+		$i = 1;
+		foreach	($query as $q){
+					if($i>1){
+					$output .= '!';
+					$output .= '"+bk_att_name_'.$i.'+"|"+bk_att_age_'.$i.'+"|"+bk_att_weight_'.$i.'+"|"+"'.$q->ID.'"+"';	;
+				//	$output .= 'bk_att_name_'.$i.': bk_att_name_'.$i.', bk_att_age_'.$i.':bk_att_age_'.$i.', bk_att_weight_'.$i.': bk_att_weight_'.$i.', ';	;
+					
+						}else{
+					//$output .= 'bk_att_name_'.$i.':bk_att_name_'.$i.', bk_att_age_'.$i.':bk_att_age_'.$i.', bk_att_weight_'.$i.': bk_att_weight_'.$i.', ';	;
+					$output .= '"+bk_att_name_'.$i.'+"|"+bk_att_age_'.$i.'+"|"+bk_att_weight_'.$i.'+"|"+"'.$q->ID.'"+"';	;
+					
+						}
+				$i++;
+			}
+			
+			return $output;
+		}
+
+
+
+
+	//inner edit inner save
+	function bk_save_att_data(){
+		$cid = $_POST["cid"];
+		$attendees_info = $_POST['attendees_info'];
+		global $wpdb;
+		$query = $wpdb->get_results( "SELECT * FROM wp_app_appointments WHERE cid LIKE '$cid'" );	
+		$i = 1;
+		/*foreach	($query as $q){
+				$data['bk_att_name_'.$i.'']		= $_POST['bk_att_name_'.$i.''];
+				$data['bk_att_age_'.$i.'']		= $_POST['bk_att_age_'.$i.''];
+				$data['bk_att_weight_'.$i.'']		= $_POST['bk_att_weight_'.$i.''];
+				$wpdb->update( $this->app_table, $data, array('ID' => $app_id) );
+				$i++;
+			}*/
+	
+	
+			$attendees_info= explode( "!", $attendees_info );
+			
+			foreach($attendees_info as $arrays){
+				$arrs= explode( "|", $arrays );
+					$data['name'] = $arrs['0'];
+					$data['age'] = $arrs['1'];
+					$data['weight'] = $arrs['2'];
+					$app_id = $arrs['3'];
+					$wpdb->update( $this->app_table, $data, array('ID' => $app_id) );
+				}
+			
+			
+			
+			
+			
+			die( json_encode(
+							array(
+							'attendees_info'			=>$attendees_info,
+							)
+						)
+					);
+		
+		
+		}
+
+
+
+
+
+
+
+
+
 	function inline_edit_save() {
 		$app_id = $_POST["app_id"];
+		$cid = $_POST["cid"];
 		$email_sent = false;
 		global $wpdb, $current_user;
-		$app = $wpdb->get_row( $wpdb->prepare("SELECT * FROM {$this->app_table} WHERE ID=%d", $app_id) );
-
+		$app = $wpdb->get_row( $wpdb->prepare("SELECT * FROM {$this->app_appointments_custom} WHERE ID=%d", $app_id) );
+		$app_reals = $wpdb->get_results("SELECT * FROM  `wp_app_appointments` WHERE  `cid` LIKE  '$app->cid'" );
 		$data = array();
 		if ( $app != null )
 			$data['ID'] = $app_id;
@@ -8046,12 +8259,31 @@ if ($this->worker && $this->service && ($app->service != $this->service)) {
 		$data['status']		= $_POST['status'];
 		$resend				= $_POST["resend"];
 
+
+
+		$data2['price']		= $_POST['price'];
+		// Clear comma from date format. It creates problems for php5.2
+		$data2['start']		= date( 'Y-m-d H:i:s', strtotime( str_replace( ',','', $this->to_us( $_POST['date'] ) ). " " . $this->to_military( $_POST['time'] ) ) );
+		$data2['end']		= date( 'Y-m-d H:i:s', strtotime( str_replace( ',','', $this->to_us( $_POST['date'] ) ). " " . $this->to_military( $_POST['time'] ) ) + $service->duration *60 );
+		$data2['note']		= $_POST['note'];
+		$data2['status']		= $_POST['status'];
+		$resend				= $_POST["resend"];
+
+
+
+
+
+
+
 		$data = apply_filters('app-appointment-inline_edit-save_data', $data);
 
 		$update_result = $insert_result = false;
 		if( $app != null ) {
 			// Update
-			$update_result = $wpdb->update( $this->app_table, $data, array('ID' => $app_id) );
+			$update_result = $wpdb->update( $this->app_appointments_custom, $data, array('ID' => $app_id) );
+			foreach($app_reals as $real){
+			$wpdb->update( $this->app_table, $data2, array('ID' => $real->ID) );
+				}
 			if ( $update_result ) {
 				if ( ( 'pending' == $data['status'] || 'removed' == $data['status'] || 'completed' == $data['status'] ) && is_object( $this->gcal_api ) ) {
 					$this->gcal_api->delete( $app_id );
@@ -8287,10 +8519,10 @@ function receive_paypal_2($custom){
 			$att_info= explode( "!", $att_info );
 				}
 				
-			$array_combine = array_combine($arrs,$att_info);	
+			$array_combine = array_combine($att_info,$arrs);	
 			//print_r($array_combine);
 			foreach($array_combine as $key=>$val){
-					$each_info= explode( "|", $val );
+					$each_info= explode( "|", $key );
 					$name = $each_info['0'];
 					$age = $each_info['1'];
 					$weight = $each_info['2'];
@@ -8301,13 +8533,15 @@ function receive_paypal_2($custom){
 								'cid'		=>	$cid,
 								'user'		=>	$user_id,
 								'name'		=>	$name,
+								'age'		=>	$age,
+								'weight'	=>	$weight,
 								'email'		=>	$email,
 								'phone'		=>	$phone,
 								'address'	=>	$address,
 								'city'		=>	$city,
 								'location'	=>	$location,
 								'service'	=>	$service,
-								'worker'	=> 	$key,
+								'worker'	=> 	$val,
 								'price'		=>	$price,
 								'coupon'	=>	$coupon,
 								'status'	=>	$status,

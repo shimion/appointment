@@ -96,7 +96,7 @@ if ( true || isset( $_GET["type"] ) && 'removed' == $_GET["type"] ) {
 					}
 					?>
 						<td class="column-app_ID">
-							<span class="span_app_ID"><?php	echo $app->ID;?></span>
+							<span class="span_app_ID" cid="<?php	echo $app->cid;?>"><?php	echo $app->ID;?></span>
 
 						</td>
 						<td class="column-user">
@@ -218,7 +218,8 @@ if ( isset( $_GET["type"] ) && 'removed' == $_GET["type"] ) {
 			var app_parent = $(this).parents(".app-tr");
 			app_parent.find(".waiting").show();
 			var app_id = app_parent.find(".span_app_ID").html();
-			var data = {action: 'inline_edit', col_len: col_len, app_id: app_id, nonce: '<?php echo wp_create_nonce() ?>'};
+			var cid = app_parent.find(".span_app_ID").attr('cid');
+			var data = {action: 'inline_edit', col_len: col_len, app_id: app_id, cid: cid, nonce: '<?php echo wp_create_nonce() ?>'};
 			$.post(ajaxurl, data, function(response) {
 				app_parent.find(".waiting").hide();
 				if ( response && response.error ){
@@ -269,7 +270,7 @@ if ( isset( $_GET["type"] ) && 'removed' == $_GET["type"] ) {
 			var time = save_parent.find('select[name="time"] option:selected').val();
 			var note = save_parent.find('textarea').val();
 			var status = save_parent.find('select[name="status"] option:selected').val();
-
+			
 			var dt = save_parent.find('input[name="date"]').attr("data-timestamp");
 			if (dt.length) date = dt;
 			else return false;
@@ -278,7 +279,8 @@ if ( isset( $_GET["type"] ) && 'removed' == $_GET["type"] ) {
 			var resend = 0;
 			if (save_parent.find('input[name="resend"]').is(':checked') ) { resend=1;}
 			var app_id = save_parent.find('input[name="app_id"]').val();
-			var data = {action: 'inline_edit_save', user:user, name:name, email:email, phone:phone, address:address,city:city, service:service, worker:worker, price:price, date:date, time:time, note:note, status:status, resend:resend, app_id: app_id, nonce: '<?php echo wp_create_nonce() ?>'};
+			var cid = save_parent.find('input[name="cid"]').val();
+			var data = {action: 'inline_edit_save', user:user, name:name, email:email, phone:phone, address:address,city:city, service:service, worker:worker, price:price, date:date, time:time, note:note, status:status, resend:resend, app_id: app_id, cid: cid, nonce: '<?php echo wp_create_nonce() ?>'};
 			$(document).trigger('app-appointment-inline_edit-save_data', [data, save_parent]);
 			$.post(ajaxurl, data, function(response) {
 				save_parent.find(".waiting").hide();
